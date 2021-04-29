@@ -8,6 +8,7 @@ using Medallion.Shell;
 using Microsoft.Extensions.Logging;
 using Jellyfin.Plugin.RunScripts.Configuration;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Jellyfin.Plugin.RunScripts
 {
@@ -63,7 +64,7 @@ namespace Jellyfin.Plugin.RunScripts
                         userConfig.CmdPlaybackStart.Split(" ")[1..],
                         options => options
                             .Timeout(TimeSpan.FromMinutes(10))
-                            .EnvironmentVariable("EVENT_ARGS", _jsonSerializer.SerializeToString(e))
+                            .EnvironmentVariable("EVENT_ARGS", stripPasswords(_jsonSerializer.SerializeToString(e)))
                     );
                     var result = await command.Task;
 
@@ -107,7 +108,7 @@ namespace Jellyfin.Plugin.RunScripts
                         userConfig.CmdPlaybackStopped.Split(" ")[1..],
                         options => options
                             .Timeout(TimeSpan.FromMinutes(10))
-                            .EnvironmentVariable("EVENT_ARGS", _jsonSerializer.SerializeToString(e))
+                            .EnvironmentVariable("EVENT_ARGS", stripPasswords(_jsonSerializer.SerializeToString(e)))
                     );
                     var result = await command.Task;
 
@@ -135,6 +136,11 @@ namespace Jellyfin.Plugin.RunScripts
             return Plugin.Instance.Configuration.RunScriptsUsers.FirstOrDefault(
                 u => u.UserId.Equals(userGuid)
             );
+        }
+
+        private string stripPasswords(string eventArgs)
+        {
+            return Regex.Replace(eventArgs, "\"Password\":\".+?\",", "");
         }
 
         /// <inheritdoc />
