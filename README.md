@@ -38,9 +38,11 @@ print(json.dumps(data, indent=2))
 
 2. Ensure you have .NET Core SDK setup and installed
 
-3. Build plugin with following command.
+3. Build the plugin with the following command:
 
 ```sh
 dotnet publish --configuration Release --output bin
 ```
-4. Place the resulting file in the `plugins` folder under the program data directory or inside the portable install directory
+
+4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into a
+subdirectory `Jellyfin_1.0.0.0` in the Jellyfin `plugins` directory
