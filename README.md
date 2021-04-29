@@ -31,6 +31,16 @@ data = json.loads(os.environ["EVENT_ARGS"])
 print(json.dumps(data, indent=2))
 ```
 
+### Use with Docker
+The Jellyfin Docker container doesn't come with python or most other
+scripting languages.
+
+You will have to compile your scripts into standalone executables or
+mount a portable interpreter into docker and run it with that.
+
+An easy way for python scripts is to make your script standalone with
+PyInstaller.
+
 
 ## Build Process
 
@@ -44,5 +54,5 @@ print(json.dumps(data, indent=2))
 dotnet publish --configuration Release --output bin
 ```
 
-4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into a
-subdirectory `Jellyfin_1.0.0.0` in the Jellyfin `plugins` directory
+4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into
+a subdirectory `Jellyfin_1.0.0.0` in the Jellyfin `plugins` directory
