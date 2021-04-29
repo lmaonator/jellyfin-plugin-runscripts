@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>RunScripts</title>
+</head>
+<body>
+    <div id="RunScriptsConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="RunScriptsConfigForm">
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="user">Configure RunScripts for:</label>
+                        <select is="emby-select" id="user" name="user" class="emby-select-withcolor emby-select">
+                        </select>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputeLabel inputLabelUnfocused" for="playbackstart">Event PlaybackStart</label>
+                        <input id="playbackstart" name="playbackstart" type="text" is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputeLabel inputLabelUnfocused" for="playbackstopped">Event PlaybackStopped</label>
+                        <input id="playbackstopped" name="playbackstopped" type="text" is="emby-input" />
+                    </div>
+
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            // everything here should be var or we get redaclaration errors when
+            // leaving and coming back to the configuration page
+            var pluginUniqueId = "fd977b59-3484-40a9-809f-d14dba87477a";
+
+            var userSelect = document.querySelector("#user");
+            var playbackStartInput = document.querySelector("#playbackstart");
+            var playbackStoppedInput = document.querySelector("#playbackstopped");
+
+            var configDefaults = {
+                UserId:             "",
+                CmdPlaybackStart:   "",
+                CmdPlaybackStopped: "",
+            }
+            var config = [];
+            var users = [];
+
+            function generateUserList() {
+                let currentUser = ApiClient.getCurrentUserId();
+                users.forEach((user) => {
+                    let select = document.createElement("option");
+                    select.value = user.Id;
+                    select.textContent = user.Name;
+                    if (user.Id == currentUser) select.selected = true;
+                    userSelect.appendChild(select);
+                });
+                userSelect.addEventListener("change", userChanged);
+            }
+
+            function getSelectedUserId() {
+                return userSelect.options[userSelect.selectedIndex].value;
+            }
+
+            function getSelectedUserData() {
+                let userId = getSelectedUserId();
+                let selectedUser = config.RunScriptsUsers.filter((user) => {
+                    return user.UserId == userId;
+                })[0];
+                return selectedUser;
+            }
+
+            function userChanged() {
+                let userData = getSelectedUserData();
+                let data = Object.assign({}, configDefaults, userData);
+
+                playbackStartInput.value = data.CmdPlaybackStart;
+                playbackStoppedInput.value = data.CmdPlaybackStopped;
+            }
+
+            document.querySelector("#RunScriptsConfigPage").addEventListener("pageshow", () => {
+                Dashboard.showLoadingMsg();
+                Promise.all([
+                    ApiClient.getPluginConfiguration(pluginUniqueId),
+                    ApiClient.getUsers()
+                ])
+                .then(([cfg, u]) => {
+                    config = cfg;
+                    users = u;
+                    generateUserList();
+                    userChanged();
+                    Dashboard.hideLoadingMsg();
+                });
+            });
+
+            document.querySelector("#RunScriptsConfigForm").addEventListener("submit", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginUniqueId).then((cfg) => {
+                    config = cfg; // in case other user updated their info
+
+                    let userData = getSelectedUserData();
+                    if (!userData) { // create new user data
+                        userData = Object.assign({}, configDefaults, { UserId: getSelectedUserId() });
+                        config.RunScriptsUsers.push(userData);
+                    }
+
+                    userData.CmdPlaybackStart = playbackStartInput.value;
+                    userData.CmdPlaybackStopped = playbackStoppedInput.value;
+
+                    ApiClient.updatePluginConfiguration(pluginUniqueId, config).then((result) => {
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                    });
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
