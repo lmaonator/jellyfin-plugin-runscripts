@@ -5,6 +5,11 @@ after events like playback start and stop.
 
 Currently only `PlaybackStart` and `PlaybackStopped` are implemented.
 
+## Plugin Repository
+
+Add the repository to Jellyfin under Dashboard -> Plugins -> Repositories.
+- Name: RunScripts Stable
+- URL: https://lmaonator.github.io/jellyfin-plugin-runscripts/manifest.json
 
 ## Usage
 Go to the plugin configuration page and set commands for users.
