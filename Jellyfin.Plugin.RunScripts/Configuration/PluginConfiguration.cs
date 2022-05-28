@@ -1,22 +1,25 @@
-using MediaBrowser.Model.Plugins;
+#pragma warning disable CA1819
+
 using System;
+using MediaBrowser.Model.Plugins;
 
-namespace Jellyfin.Plugin.RunScripts.Configuration
+namespace Jellyfin.Plugin.RunScripts.Configuration;
+
+/// <summary>
+/// Class for RunScripts plugin configuration.
+/// </summary>
+public class PluginConfiguration : BasePluginConfiguration
 {
-    public class RunScriptsUser
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PluginConfiguration"/> class.
+    /// </summary>
+    public PluginConfiguration()
     {
-        public Guid UserId { get; set; }
-        public string CmdPlaybackStart { get; set; }
-        public string CmdPlaybackStopped { get; set; }
+        RunScriptsUsers = Array.Empty<RunScriptsUser>();
     }
 
-    public class PluginConfiguration : BasePluginConfiguration
-    {
-        public RunScriptsUser[] RunScriptsUsers { get; set; }
-
-        public PluginConfiguration()
-        {
-            RunScriptsUsers = new RunScriptsUser[] { };
-        }
-    }
+    /// <summary>
+    /// Gets or sets the RunScriptsUsers array.
+    /// </summary>
+    public RunScriptsUser[] RunScriptsUsers { get; set; }
 }
