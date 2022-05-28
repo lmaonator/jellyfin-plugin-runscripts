@@ -128,7 +128,7 @@ public class RunScripts : IServerEntryPoint
 
     private RunScriptsUser? GetUserConfig(Guid userGuid)
     {
-        if (Plugin.Instance?.Configuration.RunScriptsUsers == null)
+        if (Plugin.Instance == null || Plugin.Instance.Configuration.RunScriptsUsers == null)
         {
             return null;
         }
