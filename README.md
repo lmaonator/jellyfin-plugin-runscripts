@@ -60,4 +60,4 @@ dotnet publish --configuration Release --output bin
 ```
 
 4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into
-a subdirectory `RunScripts_1.0.0.0` in the Jellyfin `plugins` directory
+a subdirectory `RunScripts_1.0.0.1` in the Jellyfin `plugins` directory
