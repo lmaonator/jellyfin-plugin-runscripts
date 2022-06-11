@@ -8,12 +8,20 @@
         "overview": "Run scripts after events like playback start and stop",
         "versions": [
             {
-                "checksum": "e0836eb02cccd9daa38be9f5f4bdcea3",
+                "version": "1.0.0.1",
+                "changelog": "Update for Jellyfin 10.8.0.0",
+                "targetAbi": "10.8.0.0",
+                "sourceUrl": "https://github.com/lmaonator/jellyfin-plugin-runscripts/releases/download/v1.0.0.1/RunScripts_1.0.0.1.zip",
+                "checksum": "0cfd9e48917b41f5ec723d18cd9655a1",
+                "timestamp": "2022-06-11T16:59:17Z"
+            },
+            {
+                "version": "1.0.0.0",
                 "changelog": "initial release",
                 "targetAbi": "10.7.0.0",
                 "sourceUrl": "https://github.com/lmaonator/jellyfin-plugin-runscripts/releases/download/v1.0.0.0/RunScripts_1.0.0.0.zip",
-                "timestamp": "2021-04-30 14:36:00",
-                "version": "1.0.0.0"
+                "checksum": "e0836eb02cccd9daa38be9f5f4bdcea3",
+                "timestamp": "2021-04-30T14:36:00Z"
             }
         ]
     }
