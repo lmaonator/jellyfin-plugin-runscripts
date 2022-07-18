@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.RunScripts.Configuration;
@@ -19,6 +20,7 @@ public class RunScripts : IServerEntryPoint
 {
     private readonly ISessionManager _sessionManager;
     private readonly ILogger<RunScripts> _logger;
+    private readonly JsonSerializerOptions _jsonOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RunScripts"/> class.
@@ -29,6 +31,7 @@ public class RunScripts : IServerEntryPoint
     {
         _logger = loggerFactory.CreateLogger<RunScripts>();
         _sessionManager = sessionManager;
+        _jsonOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
     }
 
     /// <inheritdoc />
@@ -66,7 +69,7 @@ public class RunScripts : IServerEntryPoint
                     userConfig.CmdPlaybackStart.Split(" ")[1..],
                     options => options
                         .Timeout(TimeSpan.FromMinutes(10))
-                        .EnvironmentVariable("EVENT_ARGS", StripPasswords(JsonSerializer.Serialize(e))));
+                        .EnvironmentVariable("EVENT_ARGS", StripPasswords(JsonSerializer.Serialize(e, _jsonOptions))));
                 var result = await command.Task.ConfigureAwait(false);
 
                 if (!result.Success)
@@ -109,7 +112,7 @@ public class RunScripts : IServerEntryPoint
                     userConfig.CmdPlaybackStopped.Split(" ")[1..],
                     options => options
                         .Timeout(TimeSpan.FromMinutes(10))
-                        .EnvironmentVariable("EVENT_ARGS", StripPasswords(JsonSerializer.Serialize(e))));
+                        .EnvironmentVariable("EVENT_ARGS", StripPasswords(JsonSerializer.Serialize(e, _jsonOptions))));
                 var result = await command.Task.ConfigureAwait(false);
 
                 if (!result.Success)
