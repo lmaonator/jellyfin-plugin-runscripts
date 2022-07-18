@@ -25,6 +25,8 @@ using the environment variable `EVENT_ARGS`.
 Currently the plugin simply passes the JSON serialized event arguments
 (eg `PlaybackStopEventArgs`) as an environment variable `EVENT_ARGS`.
 
+*Properties with null values are ignored during serialization.*
+
 You can see the available fields by using a python script like this
 and checking the Jellyfin log:
 ```python
@@ -60,4 +62,4 @@ dotnet publish --configuration Release --output bin
 ```
 
 4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into
-a subdirectory `RunScripts_1.0.0.1` in the Jellyfin `plugins` directory
+a subdirectory `RunScripts_1.1.0.0` in the Jellyfin `plugins` directory
