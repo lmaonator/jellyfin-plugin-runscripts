@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -112,15 +113,17 @@ public class RunScripts : IServerEntryPoint
                 continue;
             }
 
-            _logger.LogInformation("{Username}: Running command \"{CmdPlaybackStart}\"", user.Username, userConfig.CmdPlaybackStart);
+            var commandLine = ParseCommandLine(userConfig.CmdPlaybackStart);
+
+            _logger.LogInformation("{Username}: Running command: {CommandLine}", user.Username, commandLine);
 
             var scriptEnv = GetScriptEnvStart(e);
 
             try
             {
                 var command = Command.Run(
-                    userConfig.CmdPlaybackStart.Split(" ")[0],
-                    userConfig.CmdPlaybackStart.Split(" ")[1..],
+                    commandLine[0],
+                    commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
                     options => options
                         .Timeout(TimeSpan.FromMinutes(10))
                         .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(scriptEnv)));
@@ -128,14 +131,14 @@ public class RunScripts : IServerEntryPoint
 
                 if (!result.Success)
                 {
-                    _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError);
+                    _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
                 }
 
-                _logger.LogInformation("{Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput);
+                _logger.LogInformation("{Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "{Username}: Error running \"{CmdPlaybackStart}\"", user.Username, userConfig.CmdPlaybackStart);
+                _logger.LogError(ex, "{Username}: Error running command", user.Username);
             }
         }
     }
@@ -157,15 +160,17 @@ public class RunScripts : IServerEntryPoint
                 continue;
             }
 
-            _logger.LogInformation("{Username}: Running command \"{CmdPlaybackStopped}\"", user.Username, userConfig.CmdPlaybackStopped);
+            var commandLine = ParseCommandLine(userConfig.CmdPlaybackStopped);
+
+            _logger.LogInformation("{Username}: Running command: {CommandLine}", user.Username, commandLine);
 
             var scriptEnv = GetScriptEnvStop(e);
 
             try
             {
                 var command = Command.Run(
-                    userConfig.CmdPlaybackStopped.Split(" ")[0],
-                    userConfig.CmdPlaybackStopped.Split(" ")[1..],
+                    commandLine[0],
+                    commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
                     options => options
                         .Timeout(TimeSpan.FromMinutes(10))
                         .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(scriptEnv)));
@@ -173,14 +178,14 @@ public class RunScripts : IServerEntryPoint
 
                 if (!result.Success)
                 {
-                    _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError);
+                    _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
                 }
 
-                _logger.LogInformation("{Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput);
+                _logger.LogInformation("{Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "{Username}: Error running \"{CmdPlaybackStopped}\"", user.Username, userConfig.CmdPlaybackStopped);
+                _logger.LogError(ex, "{Username}: Error running command", user.Username);
             }
         }
     }
@@ -193,6 +198,57 @@ public class RunScripts : IServerEntryPoint
         }
 
         return Plugin.Instance.Configuration.RunScriptsUsers.FirstOrDefault(u => u.UserId.Equals(userGuid));
+    }
+
+    private static List<string> ParseCommandLine(string input)
+    {
+        List<string> arguments = new List<string>();
+        bool insideQuotes = false;
+        bool escapeNextChar = false;
+        string currentArgument = string.Empty;
+
+        foreach (char c in input)
+        {
+            if (escapeNextChar)
+            {
+                currentArgument += c;
+                escapeNextChar = false;
+            }
+            else if (c == '\\')
+            {
+                escapeNextChar = true;
+            }
+            else if (c == '\"')
+            {
+                if (insideQuotes && !escapeNextChar)
+                {
+                    insideQuotes = false;
+                }
+                else
+                {
+                    insideQuotes = true;
+                }
+            }
+            else if (c == ' ' && !insideQuotes)
+            {
+                if (!string.IsNullOrEmpty(currentArgument))
+                {
+                    arguments.Add(currentArgument);
+                    currentArgument = string.Empty;
+                }
+            }
+            else
+            {
+                currentArgument += c;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(currentArgument))
+        {
+            arguments.Add(currentArgument);
+        }
+
+        return arguments;
     }
 
     /// <inheritdoc />

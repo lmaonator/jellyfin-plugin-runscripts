@@ -16,19 +16,22 @@ Add the repository to Jellyfin under Dashboard -> Plugins -> Repositories.
 
 Go to the plugin configuration page and set commands for users.
 
-Commands have to be set using absolute paths, eg.
-`/home/user/scripts/jellyfin.py`.
+Commands support quoted strings which can contain spaces and backslash escape for quotes.  
+Note: Only double-quotes ( `"` ) work, don't use single-quotes.
 
-Commands are simply split by spaces and everything after the
-first space is passed as arguments. Escaping spaces or using quotes
-will not work, you should handle everything in the script itself
-using the environment variable `EVENT_ARGS`.
+For example:  
+`"/path with/spaces/script.py" arg1 "arg 2" "arg3 with \" quote"`  
+is parsed into:
 
-Currently the plugin passes select attributes from the event arguments
+- `/path with/spaces/script.py`
+- `arg1`
+- `arg 2`
+- `arg3 with " quote`
+
+The plugin passes only a select subste of attributes from the event arguments
 (eg. `PlaybackStopEventArgs`) to the script as a JSON serialized environment
-variable `EVENT_ARGS`.
-
-This was necessary because lage play queues fail with `System.ComponentModel.Win32Exception: Argument list too long` and the script would not be executed.
+variable `EVENT_ARGS`.  
+This is necessary because lage play queues fail with `System.ComponentModel.Win32Exception: Argument list too long` and the script would not be executed.
 
 The attributes are:
 
@@ -81,9 +84,9 @@ PyInstaller.
 
 3. Build the plugin with the following command:
 
-```sh
-dotnet publish --configuration Release --output bin
-```
+    ```sh
+    dotnet publish --configuration Release --output bin
+    ```
 
 4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into
-a subdirectory `RunScripts_2.0.0.0` in the Jellyfin `plugins` directory
+    a subdirectory `RunScripts_2.0.0.0` in the Jellyfin `plugins` directory

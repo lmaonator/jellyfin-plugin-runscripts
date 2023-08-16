@@ -15,6 +15,9 @@ insert_final_newline = true
 end_of_line = lf
 max_line_length = off
 
+[*.md]
+trim_trailing_whitespace = false
+
 # YAML indentation
 [*.{yml,yaml}]
 indent_size = 2
