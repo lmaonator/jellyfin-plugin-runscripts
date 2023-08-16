@@ -1,7 +1,7 @@
 ---
 name: "RunScripts"
 guid: "616552f9-8355-4737-bbe0-8217f9e8ea14"
-version: "1.1.0.0"
+version: "2.0.0.0"
 targetAbi: "10.8.0.0"
 framework: "net6.0"
 overview: "Run scripts after events like playback start and stop"
