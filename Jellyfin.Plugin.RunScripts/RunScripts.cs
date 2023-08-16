@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.RunScripts.Configuration;
 using Medallion.Shell;
@@ -31,7 +30,7 @@ public class RunScripts : IServerEntryPoint
     {
         _logger = loggerFactory.CreateLogger<RunScripts>();
         _sessionManager = sessionManager;
-        _jsonOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault };
+        _jsonOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     }
 
     /// <inheritdoc />
@@ -41,6 +40,59 @@ public class RunScripts : IServerEntryPoint
         _sessionManager.PlaybackStart += PlaybackStart;
         _sessionManager.PlaybackStopped += PlaybackStopped;
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// MediaInfo.Path is incorrect for multi-version files, grab the real MediaSource from playlist.
+    /// </summary>
+    /// <param name="e">Event info.</param>
+    /// <returns>The currently playing MediaSource or null.</returns>
+    private MediaBrowser.Model.Dto.MediaSourceInfo? GetPlayingVersion(PlaybackProgressEventArgs e)
+    {
+        var mediaSourceId = e.MediaSourceId;
+        foreach (var queueItem in e.Session.NowPlayingQueueFullItems)
+        {
+            foreach (var mediaSource in queueItem.MediaSources)
+            {
+                if (mediaSource.Id == mediaSourceId)
+                {
+                    return mediaSource;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private RunScriptsEnv GetScriptEnvStart(PlaybackProgressEventArgs e)
+    {
+        double? playbackPercentage = null;
+        if (e.PlaybackPositionTicks != null && e.MediaInfo.RunTimeTicks != null && e.PlaybackPositionTicks > 0)
+        {
+            playbackPercentage = (double)e.PlaybackPositionTicks / (double)e.MediaInfo.RunTimeTicks;
+        }
+
+        var scriptEnv = new RunScriptsEnv
+        {
+            UserId = e.Session.UserId,
+            UserName = e.Session.UserName,
+            SessionId = e.Session.Id,
+            DeviceId = e.Session.DeviceId,
+            DeviceName = e.Session.DeviceName,
+            ClientName = e.Session.Client,
+            MediaSource = GetPlayingVersion(e),
+            MediaInfo = e.MediaInfo,
+            PlaybackPositionTicks = e.PlaybackPositionTicks,
+            PlaybackPercentage = playbackPercentage,
+        };
+        return scriptEnv;
+    }
+
+    private RunScriptsEnv GetScriptEnvStop(PlaybackStopEventArgs e)
+    {
+        var scriptEnv = GetScriptEnvStart(e);
+        scriptEnv.PlayedToCompletion = e.PlayedToCompletion;
+        return scriptEnv;
     }
 
     private async void PlaybackStart(object? sender, PlaybackProgressEventArgs e)
@@ -62,6 +114,8 @@ public class RunScripts : IServerEntryPoint
 
             _logger.LogInformation("{Username}: Running command \"{CmdPlaybackStart}\"", user.Username, userConfig.CmdPlaybackStart);
 
+            var scriptEnv = GetScriptEnvStart(e);
+
             try
             {
                 var command = Command.Run(
@@ -69,7 +123,7 @@ public class RunScripts : IServerEntryPoint
                     userConfig.CmdPlaybackStart.Split(" ")[1..],
                     options => options
                         .Timeout(TimeSpan.FromMinutes(10))
-                        .EnvironmentVariable("EVENT_ARGS", StripPasswords(JsonSerializer.Serialize(e, _jsonOptions))));
+                        .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(scriptEnv)));
                 var result = await command.Task.ConfigureAwait(false);
 
                 if (!result.Success)
@@ -105,6 +159,8 @@ public class RunScripts : IServerEntryPoint
 
             _logger.LogInformation("{Username}: Running command \"{CmdPlaybackStopped}\"", user.Username, userConfig.CmdPlaybackStopped);
 
+            var scriptEnv = GetScriptEnvStop(e);
+
             try
             {
                 var command = Command.Run(
@@ -112,7 +168,7 @@ public class RunScripts : IServerEntryPoint
                     userConfig.CmdPlaybackStopped.Split(" ")[1..],
                     options => options
                         .Timeout(TimeSpan.FromMinutes(10))
-                        .EnvironmentVariable("EVENT_ARGS", StripPasswords(JsonSerializer.Serialize(e, _jsonOptions))));
+                        .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(scriptEnv)));
                 var result = await command.Task.ConfigureAwait(false);
 
                 if (!result.Success)
@@ -137,11 +193,6 @@ public class RunScripts : IServerEntryPoint
         }
 
         return Plugin.Instance.Configuration.RunScriptsUsers.FirstOrDefault(u => u.UserId.Equals(userGuid));
-    }
-
-    private string StripPasswords(string eventArgs)
-    {
-        return Regex.Replace(eventArgs, "\"Password\":\".+?\",", string.Empty);
     }
 
     /// <inheritdoc />

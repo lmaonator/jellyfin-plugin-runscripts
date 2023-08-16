@@ -8,10 +8,12 @@ Currently only `PlaybackStart` and `PlaybackStopped` are implemented.
 ## Plugin Repository
 
 Add the repository to Jellyfin under Dashboard -> Plugins -> Repositories.
+
 - Name: RunScripts Stable
-- URL: https://lmaonator.github.io/jellyfin-plugin-runscripts/manifest.json
+- URL: <https://lmaonator.github.io/jellyfin-plugin-runscripts/manifest.json>
 
 ## Usage
+
 Go to the plugin configuration page and set commands for users.
 
 Commands have to be set using absolute paths, eg.
@@ -22,13 +24,35 @@ first space is passed as arguments. Escaping spaces or using quotes
 will not work, you should handle everything in the script itself
 using the environment variable `EVENT_ARGS`.
 
-Currently the plugin simply passes the JSON serialized event arguments
-(eg `PlaybackStopEventArgs`) as an environment variable `EVENT_ARGS`.
+Currently the plugin passes select attributes from the event arguments
+(eg. `PlaybackStopEventArgs`) to the script as a JSON serialized environment
+variable `EVENT_ARGS`.
 
-*Properties with null values are ignored during serialization.*
+This was necessary because lage play queues fail with `System.ComponentModel.Win32Exception: Argument list too long` and the script would not be executed.
+
+The attributes are:
+
+- UserId
+- UserName
+- SessionId
+- DeviceId
+- DeviceName
+- ClientName
+- MediaSource
+- MediaInfo
+- PlaybackPositionTicks
+- PlaybackPercentage (calculated by the Plugin for convenience)
+
+Note: If you play a file with multiple versions then data in `MediaInfo` (like `Path`)
+will often be wrong and from a different version than the currently playing one.
+Use the data from `MediaSource` instead when possible.
+The Plugin retrieves `MediaSource` by searching for `e.MediaSourceId` in `e.Session.NowPlayingQueueFullItems[].MediaSources[].id`.
+
+If you would like other fields from `PlaybackEventArgs` please file an issue.
 
 You can see the available fields by using a python script like this
 and checking the Jellyfin log:
+
 ```python
 #!/usr/bin/env python3
 import os
@@ -39,6 +63,7 @@ print(json.dumps(data, indent=2))
 ```
 
 ### Use with Docker
+
 The Jellyfin Docker container doesn't come with python or most other
 scripting languages.
 
@@ -47,7 +72,6 @@ mount a portable interpreter into docker and run it with that.
 
 An easy way for python scripts is to make your script standalone with
 PyInstaller.
-
 
 ## Build Process
 
