@@ -31,7 +31,9 @@ is parsed into:
 The plugin passes only a select subset of attributes from the event arguments
 (eg. `PlaybackStopEventArgs`) to the script as a JSON serialized environment
 variable `EVENT_ARGS`.  
-This is necessary because lage play queues fail with `System.ComponentModel.Win32Exception: Argument list too long` and the script would not be executed.
+This is necessary because large play queues fail with
+`System.ComponentModel.Win32Exception: Argument list too long`
+and the script would not be executed.
 
 The attributes are:
 
