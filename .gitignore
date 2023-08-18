@@ -1,5 +1,8 @@
 bin/
 obj/
 .vs/
+.vscode/
 .idea/
 artifacts
+*.bat
+*.sh

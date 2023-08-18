@@ -45,7 +45,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             new PluginPageInfo
             {
                 Name = this.Name,
-                EmbeddedResourcePath = $"{GetType().Namespace}.Configuration.configPage.html",
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
+            },
+            new PluginPageInfo
+            {
+                Name = "runscriptsjs",
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.runscripts.js"
             }
         };
     }
