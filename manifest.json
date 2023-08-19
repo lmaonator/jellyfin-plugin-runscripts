@@ -8,6 +8,14 @@
         "overview": "Run scripts after events like playback start and stop",
         "versions": [
             {
+                "version": "2.0.0.0",
+                "changelog": "- fix!: Argument list too long\n- feat: support for quoted arguments with spaces\n- fix: plugin config page empty except on first load",
+                "targetAbi": "10.8.0.0",
+                "sourceUrl": "https://github.com/lmaonator/jellyfin-plugin-runscripts/releases/download/v2.0.0.0/RunScripts_2.0.0.0.zip",
+                "checksum": "0bbbe766308bc348e96faf05db1d3899",
+                "timestamp": "2023-08-19T19:09:42Z"
+            },
+            {
                 "version": "1.1.0.0",
                 "changelog": "Ignore null values when serializing",
                 "targetAbi": "10.8.0.0",
