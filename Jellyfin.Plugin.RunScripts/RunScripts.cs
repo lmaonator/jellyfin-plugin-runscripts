@@ -68,7 +68,7 @@ public class RunScripts : IServerEntryPoint
     private RunScriptsEnv GetScriptEnvStart(PlaybackProgressEventArgs e)
     {
         double? playbackPercentage = null;
-        if (e.PlaybackPositionTicks != null && e.MediaInfo.RunTimeTicks != null && e.PlaybackPositionTicks > 0)
+        if (e.PlaybackPositionTicks != null && e.MediaInfo.RunTimeTicks != null && e.PlaybackPositionTicks > 0 && e.MediaInfo.RunTimeTicks > 0)
         {
             playbackPercentage = (double)e.PlaybackPositionTicks / (double)e.MediaInfo.RunTimeTicks;
         }
