@@ -112,19 +112,19 @@ public class RunScripts : IHostedService, IDisposable
             var userConfig = GetUserConfig(user.Id);
             if (userConfig == null)
             {
-                _logger.LogDebug("{Username}: No configuration", user.Username);
+                _logger.LogDebug("[RunScripts] {Username}: No configuration", user.Username);
                 continue;
             }
 
             if (string.IsNullOrEmpty(userConfig.CmdPlaybackStart))
             {
-                _logger.LogDebug("{Username}: No configured PlaybackStart command", user.Username);
+                _logger.LogDebug("[RunScripts] {Username}: No configured PlaybackStart command", user.Username);
                 continue;
             }
 
             var commandLine = ParseCommandLine(userConfig.CmdPlaybackStart);
 
-            _logger.LogInformation("{Username}: Running command: {CommandLine}", user.Username, commandLine);
+            _logger.LogInformation("[RunScripts] {Username}: Running command: {CommandLine}", user.Username, commandLine);
 
             var scriptEnv = GetScriptEnvStart(e);
 
@@ -140,14 +140,14 @@ public class RunScripts : IHostedService, IDisposable
 
                 if (!result.Success)
                 {
-                    _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
+                    _logger.LogError("[RunScripts] {Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
                 }
 
-                _logger.LogInformation("{Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
+                _logger.LogInformation("[RunScripts] {Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{Username}: Error running command", user.Username);
+                _logger.LogError(ex, "[RunScripts] {Username}: Error running command", user.Username);
             }
         }
     }
@@ -159,19 +159,19 @@ public class RunScripts : IHostedService, IDisposable
             var userConfig = GetUserConfig(user.Id);
             if (userConfig == null)
             {
-                _logger.LogDebug("{Username}: No configuration", user.Username);
+                _logger.LogDebug("[RunScripts] {Username}: No configuration", user.Username);
                 continue;
             }
 
             if (string.IsNullOrEmpty(userConfig.CmdPlaybackStopped))
             {
-                _logger.LogDebug("{Username}: No configured PlaybackStopped command", user.Username);
+                _logger.LogDebug("[RunScripts] {Username}: No configured PlaybackStopped command", user.Username);
                 continue;
             }
 
             var commandLine = ParseCommandLine(userConfig.CmdPlaybackStopped);
 
-            _logger.LogInformation("{Username}: Running command: {CommandLine}", user.Username, commandLine);
+            _logger.LogInformation("[RunScripts] {Username}: Running command: {CommandLine}", user.Username, commandLine);
 
             var scriptEnv = GetScriptEnvStop(e);
 
@@ -187,14 +187,14 @@ public class RunScripts : IHostedService, IDisposable
 
                 if (!result.Success)
                 {
-                    _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
+                    _logger.LogError("[RunScripts] {Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
                 }
 
-                _logger.LogInformation("{Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
+                _logger.LogInformation("[RunScripts] {Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{Username}: Error running command", user.Username);
+                _logger.LogError(ex, "[RunScripts] {Username}: Error running command", user.Username);
             }
         }
     }
