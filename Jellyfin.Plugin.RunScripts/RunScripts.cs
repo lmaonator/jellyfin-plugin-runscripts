@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.RunScripts.Configuration;
 using Medallion.Shell;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Session;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.RunScripts;
@@ -16,7 +17,7 @@ namespace Jellyfin.Plugin.RunScripts;
 /// <summary>
 /// RunScripts class.
 /// </summary>
-public class RunScripts : IServerEntryPoint
+public class RunScripts : IHostedService, IDisposable
 {
     private readonly ISessionManager _sessionManager;
     private readonly ILogger<RunScripts> _logger;
@@ -35,11 +36,19 @@ public class RunScripts : IServerEntryPoint
     }
 
     /// <inheritdoc />
-    public Task RunAsync()
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         // Bind events
         _sessionManager.PlaybackStart += PlaybackStart;
         _sessionManager.PlaybackStopped += PlaybackStopped;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _sessionManager.PlaybackStart -= PlaybackStart;
+        _sessionManager.PlaybackStopped -= PlaybackStopped;
         return Task.CompletedTask;
     }
 
@@ -255,7 +264,9 @@ public class RunScripts : IServerEntryPoint
     public void Dispose()
     {
         Dispose(true);
+#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
         GC.SuppressFinalize(this);
+#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
     }
 
     /// <summary>
@@ -266,8 +277,6 @@ public class RunScripts : IServerEntryPoint
     {
         if (disposing)
         {
-            _sessionManager.PlaybackStart -= PlaybackStart;
-            _sessionManager.PlaybackStopped -= PlaybackStopped;
         }
     }
 }

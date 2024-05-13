@@ -87,8 +87,8 @@ PyInstaller.
 3. Build the plugin with the following command:
 
     ```sh
-    dotnet publish --configuration Release --output bin
+    dotnet publish --configuration Release --property:PublishDir=bin
     ```
 
 4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into
-    a subdirectory `RunScripts_2.0.0.0` in the Jellyfin `plugins` directory
+    a subdirectory `RunScripts_3.0.0.0` in the Jellyfin `plugins` directory
