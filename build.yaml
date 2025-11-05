@@ -1,9 +1,9 @@
 ---
 name: "RunScripts"
 guid: "616552f9-8355-4737-bbe0-8217f9e8ea14"
-version: "3.0.0.0"
-targetAbi: "10.9.0.0"
-framework: "net8.0"
+version: "4.0.0.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
 overview: "Run scripts after events like playback start and stop"
 description: >
   Run Scripts is a Jellyfin Plugin that let's you run custom

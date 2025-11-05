@@ -5,6 +5,15 @@ after events like playback start and stop.
 
 Currently only `PlaybackStart` and `PlaybackStopped` are implemented.
 
+## ⚠️ Security Warning
+
+Any user with administrator permissions can install this plugin and use it to
+run arbitrary commands.
+This applies in general and is not just related to this plugin.
+
+**Any user with admin permissions can install plugins that can run arbitrary
+code with the same privileges as the Jellyfin server process.**
+
 ## Plugin Repository
 
 Add the repository to Jellyfin under Dashboard -> Plugins -> Repositories.
@@ -91,4 +100,4 @@ PyInstaller.
     ```
 
 4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into
-    a subdirectory `RunScripts_3.0.0.0` in the Jellyfin `plugins` directory
+    a subdirectory `RunScripts_4.0.0.0` in the Jellyfin `plugins` directory
