@@ -8,6 +8,14 @@
         "overview": "Run scripts after events like playback start and stop",
         "versions": [
             {
+                "version": "4.0.0.0",
+                "changelog": "- feat: support jellyfin 10.11",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/lmaonator/jellyfin-plugin-runscripts/releases/download/v4.0.0.0/RunScripts_4.0.0.0.zip",
+                "checksum": "5f96c1ad486cb9b393e843acb51b4eaf",
+                "timestamp": "2025-05-11T15:22:00Z"
+            },
+            {
                 "version": "3.0.0.0",
                 "changelog": "- feat: support jellyfin 10.9",
                 "targetAbi": "10.9.0.0",
