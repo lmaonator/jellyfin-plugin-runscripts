@@ -24,6 +24,8 @@ public class RunScripts : IHostedService, IDisposable
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly Dictionary<string, (Guid Id, DateTime Dt)> _lastRun;
 
+    private int _eventCount = 0;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RunScripts"/> class.
     /// </summary>
@@ -111,7 +113,7 @@ public class RunScripts : IHostedService, IDisposable
     {
         if (_lastRun.TryGetValue(session.Id, out var v) && v.Id == mediaInfo.Id && v.Dt.AddSeconds(10) > DateTime.UtcNow)
         {
-            _logger.LogDebug("{UserName}: Already ran command for {Name}", session.UserName, mediaInfo.Name);
+            _logger.LogDebug("Already ran command for item {Name} for user {UserName}", mediaInfo.Name, session.UserName);
             return true;
         }
 
@@ -123,10 +125,10 @@ public class RunScripts : IHostedService, IDisposable
         _lastRun[session.Id] = (Id: mediaInfo.Id, Dt: DateTime.UtcNow);
     }
 
-    private async void RunCommand(string username, string commandStr, RunScriptsEnv env)
+    private async void RunCommand(string username, string commandStr, RunScriptsEnv env, int eventNum)
     {
         var commandLine = ParseCommandLine(commandStr);
-        _logger.LogInformation("{Username}: Running command: {CommandLine}", username, commandLine);
+        _logger.LogInformation("[{EventNum}] Running command for {Username}: {CommandLine}", eventNum, username, commandLine);
         try
         {
             var command = Command.Run(
@@ -139,14 +141,14 @@ public class RunScripts : IHostedService, IDisposable
 
             if (!result.Success)
             {
-                _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", username, result.ExitCode, result.StandardError.Trim());
+                _logger.LogError("[{EventNum}] Command failed with with exit code {ExitCode}: {StandardError}", eventNum, result.ExitCode, result.StandardError.Trim());
             }
 
-            _logger.LogInformation("{Username}: Command output: {StandardOutput}", username, result.StandardOutput.Trim());
+            _logger.LogInformation("[{EventNum}] Command output: {StandardOutput}", eventNum, result.StandardOutput.Trim());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "{Username}: Error running command", username);
+            _logger.LogError(ex, "[{EventNum}] Error running command", eventNum);
         }
     }
 
@@ -156,21 +158,23 @@ public class RunScripts : IHostedService, IDisposable
         {
             AddLastRunEntry(e.Session, e.MediaInfo);
 
+            var eventNum = _eventCount++;
+
             var userConfig = GetUserConfig(e.Session.UserId);
             if (userConfig == null)
             {
-                _logger.LogDebug("{Username}: No configuration", e.Session.UserName);
+                _logger.LogDebug("[{EventNum}] No configuration for {Username}", eventNum, e.Session.UserName);
                 return;
             }
 
             if (string.IsNullOrEmpty(userConfig.CmdPlaybackStart))
             {
-                _logger.LogDebug("{Username}: No configured PlaybackStart command", e.Session.UserName);
+                _logger.LogDebug("[{EventNum}] No configured PlaybackStart command for {Username}", eventNum, e.Session.UserName);
                 return;
             }
 
             var scriptEnv = GetScriptEnvStart(e);
-            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStart, scriptEnv);
+            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStart, scriptEnv, eventNum);
         }
     }
 
@@ -180,21 +184,23 @@ public class RunScripts : IHostedService, IDisposable
         {
             AddLastRunEntry(e.Session, e.MediaInfo);
 
+            var eventNum = _eventCount++;
+
             var userConfig = GetUserConfig(e.Session.UserId);
             if (userConfig == null)
             {
-                _logger.LogDebug("{Username}: No configuration", e.Session.UserName);
+                _logger.LogDebug("[{EventNum}] No configuration for {Username}", eventNum, e.Session.UserName);
                 return;
             }
 
             if (string.IsNullOrEmpty(userConfig.CmdPlaybackStopped))
             {
-                _logger.LogDebug("{Username}: No configured PlaybackStopped command", e.Session.UserName);
+                _logger.LogDebug("[{EventNum}] No configured PlaybackStopped command for {Username}", eventNum, e.Session.UserName);
                 return;
             }
 
             var scriptEnv = GetScriptEnvStop(e);
-            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStopped, scriptEnv);
+            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStopped, scriptEnv, eventNum);
         }
     }
 
