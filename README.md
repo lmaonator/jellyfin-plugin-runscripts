@@ -5,6 +5,11 @@ after events like playback start and stop.
 
 Currently only `PlaybackStart` and `PlaybackStopped` are implemented.
 
+This plugin is just a way for me to track playback progress in a janky way because
+there was no other way for some time.
+Jellyfin now has an official webhook plugin, consider using that instead:
+<https://github.com/jellyfin/jellyfin-plugin-webhook>
+
 ## ⚠️ Security Warning
 
 Any user with administrator permissions can install this plugin and use it to
