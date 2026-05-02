@@ -109,20 +109,20 @@ public class RunScripts : IHostedService, IDisposable
         return scriptEnv;
     }
 
-    private bool AlreadyRan(SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
+    private bool AlreadyRan(string eventName, SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
     {
-        if (_lastRun.TryGetValue(session.Id, out var v) && v.Id == mediaInfo.Id && v.Dt.AddSeconds(10) > DateTime.UtcNow)
+        if (_lastRun.TryGetValue(eventName + session.Id, out var v) && v.Id == mediaInfo.Id && v.Dt.AddSeconds(10) > DateTime.UtcNow)
         {
-            _logger.LogDebug("Already ran command for item {Name} for user {UserName}", mediaInfo.Name, session.UserName);
+            _logger.LogDebug("Already ran {EventName} command for item {Name} for user {UserName}", eventName, mediaInfo.Name, session.UserName);
             return true;
         }
 
         return false;
     }
 
-    private void AddLastRunEntry(SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
+    private void AddLastRunEntry(string eventName, SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
     {
-        _lastRun[session.Id] = (Id: mediaInfo.Id, Dt: DateTime.UtcNow);
+        _lastRun[eventName + session.Id] = (Id: mediaInfo.Id, Dt: DateTime.UtcNow);
     }
 
     private async void RunCommand(string username, string commandStr, RunScriptsEnv env, int eventNum)
@@ -154,9 +154,9 @@ public class RunScripts : IHostedService, IDisposable
 
     private void PlaybackStart(object? sender, PlaybackProgressEventArgs e)
     {
-        if (!AlreadyRan(e.Session, e.MediaInfo))
+        if (!AlreadyRan(nameof(PlaybackStart), e.Session, e.MediaInfo))
         {
-            AddLastRunEntry(e.Session, e.MediaInfo);
+            AddLastRunEntry(nameof(PlaybackStart), e.Session, e.MediaInfo);
 
             var eventNum = _eventCount++;
 
@@ -180,9 +180,9 @@ public class RunScripts : IHostedService, IDisposable
 
     private void PlaybackStopped(object? sender, PlaybackStopEventArgs e)
     {
-        if (!AlreadyRan(e.Session, e.MediaInfo))
+        if (!AlreadyRan(nameof(PlaybackStopped), e.Session, e.MediaInfo))
         {
-            AddLastRunEntry(e.Session, e.MediaInfo);
+            AddLastRunEntry(nameof(PlaybackStopped), e.Session, e.MediaInfo);
 
             var eventNum = _eventCount++;
 
