@@ -22,6 +22,7 @@ public class RunScripts : IHostedService, IDisposable
     private readonly ISessionManager _sessionManager;
     private readonly ILogger<RunScripts> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly Dictionary<string, (Guid Id, DateTime Dt)> _lastRun;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RunScripts"/> class.
@@ -33,6 +34,7 @@ public class RunScripts : IHostedService, IDisposable
         _logger = loggerFactory.CreateLogger<RunScripts>();
         _sessionManager = sessionManager;
         _jsonOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+        _lastRun = new Dictionary<string, (Guid Id, DateTime Dt)>();
     }
 
     /// <inheritdoc />
@@ -105,97 +107,94 @@ public class RunScripts : IHostedService, IDisposable
         return scriptEnv;
     }
 
-    private async void PlaybackStart(object? sender, PlaybackProgressEventArgs e)
+    private bool AlreadyRan(SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
     {
-        foreach (var user in e.Users)
+        if (_lastRun.TryGetValue(session.Id, out var v) && v.Id == mediaInfo.Id && v.Dt.AddSeconds(10) > DateTime.UtcNow)
         {
-            var userConfig = GetUserConfig(user.Id);
+            _logger.LogDebug("{UserName}: Already ran command for {Name}", session.UserName, mediaInfo.Name);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void AddLastRunEntry(SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
+    {
+        _lastRun[session.Id] = (Id: mediaInfo.Id, Dt: DateTime.UtcNow);
+    }
+
+    private async void RunCommand(string username, string commandStr, RunScriptsEnv env)
+    {
+        var commandLine = ParseCommandLine(commandStr);
+        _logger.LogInformation("{Username}: Running command: {CommandLine}", username, commandLine);
+        try
+        {
+            var command = Command.Run(
+                commandLine[0],
+                commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
+                options => options
+                    .Timeout(TimeSpan.FromMinutes(10))
+                    .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(env)));
+            var result = await command.Task.ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                _logger.LogError("{Username}: Command failed with with exit code {ExitCode}: {StandardError}", username, result.ExitCode, result.StandardError.Trim());
+            }
+
+            _logger.LogInformation("{Username}: Command output: {StandardOutput}", username, result.StandardOutput.Trim());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "{Username}: Error running command", username);
+        }
+    }
+
+    private void PlaybackStart(object? sender, PlaybackProgressEventArgs e)
+    {
+        if (!AlreadyRan(e.Session, e.MediaInfo))
+        {
+            AddLastRunEntry(e.Session, e.MediaInfo);
+
+            var userConfig = GetUserConfig(e.Session.UserId);
             if (userConfig == null)
             {
-                _logger.LogDebug("[RunScripts] {Username}: No configuration", user.Username);
-                continue;
+                _logger.LogDebug("{Username}: No configuration", e.Session.UserName);
+                return;
             }
 
             if (string.IsNullOrEmpty(userConfig.CmdPlaybackStart))
             {
-                _logger.LogDebug("[RunScripts] {Username}: No configured PlaybackStart command", user.Username);
-                continue;
+                _logger.LogDebug("{Username}: No configured PlaybackStart command", e.Session.UserName);
+                return;
             }
-
-            var commandLine = ParseCommandLine(userConfig.CmdPlaybackStart);
-
-            _logger.LogInformation("[RunScripts] {Username}: Running command: {CommandLine}", user.Username, commandLine);
 
             var scriptEnv = GetScriptEnvStart(e);
-
-            try
-            {
-                var command = Command.Run(
-                    commandLine[0],
-                    commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
-                    options => options
-                        .Timeout(TimeSpan.FromMinutes(10))
-                        .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(scriptEnv)));
-                var result = await command.Task.ConfigureAwait(false);
-
-                if (!result.Success)
-                {
-                    _logger.LogError("[RunScripts] {Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
-                }
-
-                _logger.LogInformation("[RunScripts] {Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[RunScripts] {Username}: Error running command", user.Username);
-            }
+            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStart, scriptEnv);
         }
     }
 
-    private async void PlaybackStopped(object? sender, PlaybackStopEventArgs e)
+    private void PlaybackStopped(object? sender, PlaybackStopEventArgs e)
     {
-        foreach (var user in e.Users)
+        if (!AlreadyRan(e.Session, e.MediaInfo))
         {
-            var userConfig = GetUserConfig(user.Id);
+            AddLastRunEntry(e.Session, e.MediaInfo);
+
+            var userConfig = GetUserConfig(e.Session.UserId);
             if (userConfig == null)
             {
-                _logger.LogDebug("[RunScripts] {Username}: No configuration", user.Username);
-                continue;
+                _logger.LogDebug("{Username}: No configuration", e.Session.UserName);
+                return;
             }
 
             if (string.IsNullOrEmpty(userConfig.CmdPlaybackStopped))
             {
-                _logger.LogDebug("[RunScripts] {Username}: No configured PlaybackStopped command", user.Username);
-                continue;
+                _logger.LogDebug("{Username}: No configured PlaybackStopped command", e.Session.UserName);
+                return;
             }
-
-            var commandLine = ParseCommandLine(userConfig.CmdPlaybackStopped);
-
-            _logger.LogInformation("[RunScripts] {Username}: Running command: {CommandLine}", user.Username, commandLine);
 
             var scriptEnv = GetScriptEnvStop(e);
-
-            try
-            {
-                var command = Command.Run(
-                    commandLine[0],
-                    commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
-                    options => options
-                        .Timeout(TimeSpan.FromMinutes(10))
-                        .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(scriptEnv)));
-                var result = await command.Task.ConfigureAwait(false);
-
-                if (!result.Success)
-                {
-                    _logger.LogError("[RunScripts] {Username}: Command failed with with exit code {ExitCode}: {StandardError}", user.Username, result.ExitCode, result.StandardError.Trim());
-                }
-
-                _logger.LogInformation("[RunScripts] {Username}: Command output: {StandardOutput}", user.Username, result.StandardOutput.Trim());
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[RunScripts] {Username}: Error running command", user.Username);
-            }
+            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStopped, scriptEnv);
         }
     }
 
