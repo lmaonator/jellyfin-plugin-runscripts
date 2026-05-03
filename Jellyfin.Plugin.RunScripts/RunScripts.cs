@@ -19,6 +19,8 @@ namespace Jellyfin.Plugin.RunScripts;
 /// </summary>
 public class RunScripts : IHostedService, IDisposable
 {
+    private const int _lastRunSeconds = 10;
+
     private readonly ISessionManager _sessionManager;
     private readonly ILogger<RunScripts> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
@@ -111,7 +113,7 @@ public class RunScripts : IHostedService, IDisposable
 
     private bool AlreadyRan(string eventName, SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
     {
-        if (_lastRun.TryGetValue(eventName + session.Id, out var v) && v.Id == mediaInfo.Id && v.Dt.AddSeconds(10) > DateTime.UtcNow)
+        if (_lastRun.TryGetValue(eventName + session.Id, out var v) && v.Id == mediaInfo.Id && v.Dt.AddSeconds(_lastRunSeconds) > DateTime.UtcNow)
         {
             _logger.LogDebug("Already ran {EventName} command for item {Name} for user {UserName}", eventName, mediaInfo.Name, session.UserName);
             return true;
@@ -123,6 +125,14 @@ public class RunScripts : IHostedService, IDisposable
     private void AddLastRunEntry(string eventName, SessionInfo session, MediaBrowser.Model.Dto.BaseItemDto mediaInfo)
     {
         _lastRun[eventName + session.Id] = (Id: mediaInfo.Id, Dt: DateTime.UtcNow);
+    }
+
+    private void RemoveOldLastRunEntries()
+    {
+        foreach (var item in _lastRun.Where(item => item.Value.Dt.AddSeconds(_lastRunSeconds) <= DateTime.UtcNow).ToList())
+        {
+            _lastRun.Remove(item.Key);
+        }
     }
 
     private async void RunCommand(string username, string commandStr, RunScriptsEnv env, int eventNum)
@@ -176,6 +186,8 @@ public class RunScripts : IHostedService, IDisposable
             var scriptEnv = GetScriptEnvStart(e);
             RunCommand(e.Session.UserName, userConfig.CmdPlaybackStart, scriptEnv, eventNum);
         }
+
+        RemoveOldLastRunEntries();
     }
 
     private void PlaybackStopped(object? sender, PlaybackStopEventArgs e)
@@ -202,6 +214,8 @@ public class RunScripts : IHostedService, IDisposable
             var scriptEnv = GetScriptEnvStop(e);
             RunCommand(e.Session.UserName, userConfig.CmdPlaybackStopped, scriptEnv, eventNum);
         }
+
+        RemoveOldLastRunEntries();
     }
 
     private RunScriptsUser? GetUserConfig(Guid userGuid)
