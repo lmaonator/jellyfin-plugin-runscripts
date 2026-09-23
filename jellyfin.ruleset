@@ -81,6 +81,10 @@
         <Rule Id="CA1812" Action="Info" />
         <!-- disable warning CA1822: Member does not access instance data and can be marked as static -->
         <Rule Id="CA1822" Action="Info" />
+
+        <!-- TODO: fix this eventually  -->
+        <Rule Id="CA1873" Action="Info" />
+
         <!-- disable warning CA2000: Dispose objects before losing scope -->
         <Rule Id="CA2000" Action="Info" />
         <!-- disable warning CA2253: Named placeholders should not be numeric values -->

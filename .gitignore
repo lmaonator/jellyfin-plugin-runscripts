@@ -6,3 +6,4 @@ obj/
 artifacts
 *.bat
 *.sh
+docker/

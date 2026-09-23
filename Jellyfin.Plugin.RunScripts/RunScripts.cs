@@ -23,6 +23,7 @@ public class RunScripts : IHostedService, IDisposable
 
     private readonly ISessionManager _sessionManager;
     private readonly ILogger<RunScripts> _logger;
+    private readonly IMediaSourceManager _mediaSourceManager;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly Dictionary<string, (Guid Id, DateTime Dt)> _lastRun;
 
@@ -33,10 +34,12 @@ public class RunScripts : IHostedService, IDisposable
     /// </summary>
     /// <param name="sessionManager">The <see cref="ISessionManager"/>.</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
-    public RunScripts(ISessionManager sessionManager, ILoggerFactory loggerFactory)
+    /// <param name="mediaSourceManager">The IMediaSourceManager.</param>
+    public RunScripts(ISessionManager sessionManager, ILoggerFactory loggerFactory, IMediaSourceManager mediaSourceManager)
     {
         _logger = loggerFactory.CreateLogger<RunScripts>();
         _sessionManager = sessionManager;
+        _mediaSourceManager = mediaSourceManager;
         _jsonOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
         _lastRun = new Dictionary<string, (Guid Id, DateTime Dt)>();
     }
@@ -58,29 +61,7 @@ public class RunScripts : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// MediaInfo.Path is incorrect for multi-version files, grab the real MediaSource from playlist.
-    /// </summary>
-    /// <param name="e">Event info.</param>
-    /// <returns>The currently playing MediaSource or null.</returns>
-    private MediaBrowser.Model.Dto.MediaSourceInfo? GetPlayingVersion(PlaybackProgressEventArgs e)
-    {
-        var mediaSourceId = e.MediaSourceId;
-        foreach (var queueItem in e.Session.NowPlayingQueueFullItems)
-        {
-            foreach (var mediaSource in queueItem.MediaSources)
-            {
-                if (mediaSource.Id == mediaSourceId)
-                {
-                    return mediaSource;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private RunScriptsEnv GetScriptEnvStart(PlaybackProgressEventArgs e)
+    private async Task<RunScriptsEnv> GetScriptEnvStart(PlaybackProgressEventArgs e)
     {
         double? playbackPercentage = null;
         if (e.PlaybackPositionTicks != null && e.MediaInfo.RunTimeTicks != null && e.PlaybackPositionTicks > 0 && e.MediaInfo.RunTimeTicks > 0)
@@ -96,17 +77,18 @@ public class RunScripts : IHostedService, IDisposable
             DeviceId = e.Session.DeviceId,
             DeviceName = e.Session.DeviceName,
             ClientName = e.Session.Client,
-            MediaSource = GetPlayingVersion(e),
             MediaInfo = e.MediaInfo,
+            // MediaInfo is incorrect for multi-version files, it always constains the first version, grab the real MediaSource
+            MediaSource = await _mediaSourceManager.GetMediaSource(e.Item, e.MediaSourceId, string.Empty, false, default).ConfigureAwait(false),
             PlaybackPositionTicks = e.PlaybackPositionTicks,
             PlaybackPercentage = playbackPercentage,
         };
         return scriptEnv;
     }
 
-    private RunScriptsEnv GetScriptEnvStop(PlaybackStopEventArgs e)
+    private async Task<RunScriptsEnv> GetScriptEnvStop(PlaybackStopEventArgs e)
     {
-        var scriptEnv = GetScriptEnvStart(e);
+        var scriptEnv = await GetScriptEnvStart(e).ConfigureAwait(false);
         scriptEnv.PlayedToCompletion = e.PlayedToCompletion;
         return scriptEnv;
     }
@@ -162,7 +144,7 @@ public class RunScripts : IHostedService, IDisposable
         }
     }
 
-    private void PlaybackStart(object? sender, PlaybackProgressEventArgs e)
+    private async void PlaybackStart(object? sender, PlaybackProgressEventArgs e)
     {
         if (!AlreadyRan(nameof(PlaybackStart), e.Session, e.MediaInfo))
         {
@@ -183,14 +165,14 @@ public class RunScripts : IHostedService, IDisposable
                 return;
             }
 
-            var scriptEnv = GetScriptEnvStart(e);
+            var scriptEnv = await GetScriptEnvStart(e).ConfigureAwait(false);
             RunCommand(e.Session.UserName, userConfig.CmdPlaybackStart, scriptEnv, eventNum);
         }
 
         RemoveOldLastRunEntries();
     }
 
-    private void PlaybackStopped(object? sender, PlaybackStopEventArgs e)
+    private async void PlaybackStopped(object? sender, PlaybackStopEventArgs e)
     {
         if (!AlreadyRan(nameof(PlaybackStopped), e.Session, e.MediaInfo))
         {
@@ -211,7 +193,7 @@ public class RunScripts : IHostedService, IDisposable
                 return;
             }
 
-            var scriptEnv = GetScriptEnvStop(e);
+            var scriptEnv = await GetScriptEnvStop(e).ConfigureAwait(false);
             RunCommand(e.Session.UserName, userConfig.CmdPlaybackStopped, scriptEnv, eventNum);
         }
 
