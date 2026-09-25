@@ -65,12 +65,18 @@ The attributes are:
 Note: If you play a file with multiple versions then data in `MediaInfo` (like `Path`)
 will often be wrong and from a different version than the currently playing one.
 Use the data from `MediaSource` instead when possible.
-The Plugin retrieves `MediaSource` by searching for `e.MediaSourceId` in `e.Session.NowPlayingQueueFullItems[].MediaSources[].id`.
+The Plugin retrieves the real `MediaSource` through the `MediaSourceManager` with `e.MediaSourceId`.
 
 If you would like other fields from `PlaybackEventArgs` please file an issue.
 
-You can see the available fields by using a python script like this
+You can see the available fields by using a shell or python script like this
 and checking the Jellyfin log:
+
+```sh
+#!/bin/sh
+
+echo "$EVENT_ARGS"
+```
 
 ```python
 #!/usr/bin/env python3
