@@ -128,7 +128,7 @@ public class RunScripts : IHostedService, IDisposable
                 commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
                 options => options
                     .Timeout(TimeSpan.FromMinutes(10))
-                    .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(env)));
+                    .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(env, _jsonOptions)));
             var result = await command.Task.ConfigureAwait(false);
 
             if (!result.Success)
