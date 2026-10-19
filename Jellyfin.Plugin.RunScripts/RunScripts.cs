@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.RunScripts.Configuration;
-using Medallion.Shell;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using Microsoft.Extensions.Hosting;
@@ -117,31 +117,86 @@ public class RunScripts : IHostedService, IDisposable
         }
     }
 
-    private async void RunCommand(string username, string commandStr, RunScriptsEnv env, int eventNum)
+    private async void RunCommand(string username, string commandStr, RunScriptsEnv env, bool useStdin, int eventNum)
     {
         var commandLine = ParseCommandLine(commandStr);
         _logger.LogInformation("[{EventNum}] Running command for {Username}: {CommandLine}", eventNum, username, commandLine);
         try
         {
-            var command = Command.Run(
-                commandLine[0],
-                commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
-                options => options
-                    .Timeout(TimeSpan.FromMinutes(10))
-                    .EnvironmentVariable("EVENT_ARGS", JsonSerializer.Serialize(env, _jsonOptions)));
-            var result = await command.Task.ConfigureAwait(false);
+            var (exitCode, stdout, stderr) = await RunProcess(
+                    commandLine[0],
+                    commandLine.Count > 1 ? commandLine.GetRange(1, commandLine.Count - 1) : null,
+                    useStdin ? string.Empty : JsonSerializer.Serialize(env, _jsonOptions),
+                    useStdin ? JsonSerializer.Serialize(env) : string.Empty,
+                    TimeSpan.FromMinutes(10)).ConfigureAwait(false);
 
-            if (!result.Success)
+            if (exitCode != 0)
             {
-                _logger.LogError("[{EventNum}] Command failed with with exit code {ExitCode}: {StandardError}", eventNum, result.ExitCode, result.StandardError.Trim());
+                _logger.LogError("[{EventNum}] Command failed with with exit code {ExitCode}: {StandardError}", eventNum, exitCode, stderr);
             }
 
-            _logger.LogInformation("[{EventNum}] Command output: {StandardOutput}", eventNum, result.StandardOutput.Trim());
+            _logger.LogInformation("[{EventNum}] Command output: {StandardOutput}", eventNum, stdout);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{EventNum}] Error running command", eventNum);
         }
+    }
+
+    private static async Task<(int ExitCode, string StdOut, string StdErr)> RunProcess(string exe, List<string>? args, string env, string stdin, TimeSpan timeout)
+    {
+        var psi = new ProcessStartInfo(exe)
+        {
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        if (args != null)
+        {
+            foreach (var arg in args)
+            {
+                psi.ArgumentList.Add(arg);
+            }
+        }
+
+        if (env.Length != 0)
+        {
+            psi.Environment.Add("EVENT_ARGS", env);
+        }
+
+        using var process = new Process { StartInfo = psi };
+        using var cts = new CancellationTokenSource(timeout);
+
+        process.Start();
+
+        // Start reading before writing, to avoid deadlocks if the output buffer fills up
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
+        var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
+
+        if (stdin.Length != 0)
+        {
+            stdin += Environment.NewLine;
+            await process.StandardInput.WriteAsync(stdin.AsMemory(), cts.Token).ConfigureAwait(false);
+            process.StandardInput.Close();
+        }
+
+        try
+        {
+            await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            process.Kill(entireProcessTree: true);
+            throw new TimeoutException($"{exe} did not finish within {timeout}.");
+        }
+
+        string stdout = await stdoutTask.ConfigureAwait(false);
+        string stderr = await stderrTask.ConfigureAwait(false);
+
+        return (process.ExitCode, stdout, stderr);
     }
 
     private async void PlaybackStart(object? sender, PlaybackProgressEventArgs e)
@@ -166,7 +221,7 @@ public class RunScripts : IHostedService, IDisposable
             }
 
             var scriptEnv = await GetScriptEnvStart(e).ConfigureAwait(false);
-            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStart, scriptEnv, eventNum);
+            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStart, scriptEnv, userConfig.UseStdin ?? false, eventNum);
         }
 
         RemoveOldLastRunEntries();
@@ -194,7 +249,7 @@ public class RunScripts : IHostedService, IDisposable
             }
 
             var scriptEnv = await GetScriptEnvStop(e).ConfigureAwait(false);
-            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStopped, scriptEnv, eventNum);
+            RunCommand(e.Session.UserName, userConfig.CmdPlaybackStopped, scriptEnv, userConfig.UseStdin ?? false, eventNum);
         }
 
         RemoveOldLastRunEntries();
@@ -265,9 +320,7 @@ public class RunScripts : IHostedService, IDisposable
     public void Dispose()
     {
         Dispose(true);
-#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
         GC.SuppressFinalize(this);
-#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
     }
 
     /// <summary>

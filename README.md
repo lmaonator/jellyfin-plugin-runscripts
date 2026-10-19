@@ -47,7 +47,12 @@ The plugin passes only a select subset of attributes from the event arguments
 variable `EVENT_ARGS`.  
 This is necessary because large play queues fail with
 `System.ComponentModel.Win32Exception: Argument list too long`
-and the script would not be executed.
+and the script would not be executed. Null fields are not serialized for the
+same reason.
+
+The error can still happen with media files that have a lot of tracks, especially
+movies. It is recommended to use the STDIN setting and read the JSON through STDIN.  
+Null fields are serialized for the STDIN string because there is no length limit.
 
 The attributes are:
 
@@ -76,6 +81,8 @@ and checking the Jellyfin log:
 #!/bin/sh
 
 echo "$EVENT_ARGS"
+# or for reading stdin:
+echo "STDIN: $(timeout 5 cat)"
 ```
 
 ```python
@@ -84,6 +91,9 @@ import os
 import json
 
 data = json.loads(os.environ["EVENT_ARGS"])
+# or for reading stdin:
+data = json.loads(input())
+
 print(json.dumps(data, indent=2))
 ```
 
@@ -110,5 +120,5 @@ PyInstaller.
     dotnet publish --configuration Release --property:PublishDir=bin
     ```
 
-4. Place `Jellyfin.Plugin.RunScripts.dll` and `MedallionShell.dll` into
-    a subdirectory `RunScripts_5.0.0.0` in the Jellyfin `plugins` directory
+4. Place `Jellyfin.Plugin.RunScripts.dll` into a subdirectory called
+    `RunScripts_5.0.1.0` in the Jellyfin `plugins` directory

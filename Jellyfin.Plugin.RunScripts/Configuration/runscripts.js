@@ -4,11 +4,13 @@ export default function (view) {
     const userSelect = view.querySelector("#user");
     const playbackStartInput = view.querySelector("#playbackstart");
     const playbackStoppedInput = view.querySelector("#playbackstopped");
+    const chkUseStdin = view.querySelector("#chkUseStdin");
 
     let configDefaults = {
         UserId: "",
         CmdPlaybackStart: "",
         CmdPlaybackStopped: "",
+        UseStdin: false,
     };
     let config = [];
     let users = [];
@@ -43,19 +45,18 @@ export default function (view) {
 
         playbackStartInput.value = data.CmdPlaybackStart;
         playbackStoppedInput.value = data.CmdPlaybackStopped;
+        chkUseStdin.checked = data.UseStdin;
     }
 
     view.addEventListener("viewshow", () => {
         Dashboard.showLoadingMsg();
-        Promise.all([ApiClient.getPluginConfiguration(pluginUniqueId), ApiClient.getUsers()]).then(
-            ([cfg, u]) => {
-                config = cfg;
-                users = u;
-                generateUserList();
-                userChanged();
-                Dashboard.hideLoadingMsg();
-            }
-        );
+        Promise.all([ApiClient.getPluginConfiguration(pluginUniqueId), ApiClient.getUsers()]).then(([cfg, u]) => {
+            config = cfg;
+            users = u;
+            generateUserList();
+            userChanged();
+            Dashboard.hideLoadingMsg();
+        });
     });
 
     view.querySelector("#RunScriptsConfigForm").addEventListener("submit", (e) => {
@@ -69,12 +70,15 @@ export default function (view) {
             let userData = getSelectedUserData();
             if (!userData) {
                 // create new user data
-                userData = Object.assign({}, configDefaults, { UserId: getSelectedUserId() });
+                userData = Object.assign({}, configDefaults, {
+                    UserId: getSelectedUserId(),
+                });
                 config.RunScriptsUsers.push(userData);
             }
 
             userData.CmdPlaybackStart = playbackStartInput.value;
             userData.CmdPlaybackStopped = playbackStoppedInput.value;
+            userData.UseStdin = chkUseStdin.checked;
 
             ApiClient.updatePluginConfiguration(pluginUniqueId, config).then((result) => {
                 Dashboard.processPluginConfigurationUpdateResult(result);

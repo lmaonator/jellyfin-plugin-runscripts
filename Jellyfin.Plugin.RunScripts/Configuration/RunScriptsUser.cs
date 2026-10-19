@@ -19,4 +19,7 @@ public class RunScriptsUser
     /// Gets or sets command to run after playback is stopped.
     /// </summary>
     public string? CmdPlaybackStopped { get; set; }
+
+    /// <summary>Gets or sets use standard input instead of env var to send json.</summary>
+    public bool? UseStdin { get; set; }
 }

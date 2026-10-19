@@ -13,7 +13,6 @@
   <ItemGroup>
     <PackageReference Include="Jellyfin.Controller" Version="12.*-*" />
     <PackageReference Include="Jellyfin.Model" Version="12.*-*" />
-    <PackageReference Include="MedallionShell" Version="1.6.2" />
   </ItemGroup>
 
   <ItemGroup>

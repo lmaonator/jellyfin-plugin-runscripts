@@ -14,13 +14,25 @@
                 </div>
 
                 <div class="inputContainer">
-                    <label class="inputeLabel inputLabelUnfocused" for="playbackstart">Event PlaybackStart</label>
+                    <label class="inputLabel inputLabelUnfocused" for="playbackstart">Event PlaybackStart</label>
                     <input id="playbackstart" name="playbackstart" type="text" is="emby-input" />
                 </div>
 
                 <div class="inputContainer">
-                    <label class="inputeLabel inputLabelUnfocused" for="playbackstopped">Event PlaybackStopped</label>
+                    <label class="inputLabel inputLabelUnfocused" for="playbackstopped">Event PlaybackStopped</label>
                     <input id="playbackstopped" name="playbackstopped" type="text" is="emby-input" />
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="chkUseStdin" name="chkUseStdin" type="checkbox" is="emby-checkbox" />
+                        <span>Send JSON through STDIN instead of the environment variable EVENT_ARGS.</span>
+                    </label>
+                    <div class="fieldDescription">
+                        Some media files (especially movies) can have a lot of metadata which can cause the JSON string
+                        length to exceed the system limit for environment variables. Using this option and reading the
+                        JSON string through STDIN is recommended.
+                    </div>
                 </div>
 
                 <div>

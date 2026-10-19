@@ -12,6 +12,5 @@ category: "General"
 owner: "lmaonator"
 artifacts:
 - "Jellyfin.Plugin.RunScripts.dll"
-- "MedallionShell.dll"
 changelog: >
   changelog
