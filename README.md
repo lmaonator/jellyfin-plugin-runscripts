@@ -121,4 +121,4 @@ PyInstaller.
     ```
 
 4. Place `Jellyfin.Plugin.RunScripts.dll` into a subdirectory called
-    `RunScripts_5.0.1.0` in the Jellyfin `plugins` directory
+    `RunScripts_5.1.0.0` in the Jellyfin `plugins` directory
